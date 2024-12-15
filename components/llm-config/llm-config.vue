@@ -1,11 +1,11 @@
 <template>
 	<uni-popup ref="popup" type="top">
 		<view class="box">
-			<text class="title">请选择llm的model</text>
+			<text class="title">请选择大模型</text>
 			<radio-group @change="radioChange" class="radio-group">
 				<label class="item" v-for="(item, index) in models" :key="item.value">
 					<radio :value="item.value" :checked="currentModel === item.value" class="radio" />
-					<view class="item-title">{{item.text}}</view>
+					<view class="item-title">{{item.name}}</view>
 				</label>
 			</radio-group>
 			<view class="btn-box">
@@ -24,38 +24,48 @@
 			return {
 				models: [
 					{
-						text:"gpt-4",
-						value:"gpt-4"
-					},
-					{
-						text:"gpt-4-0314",
-						value:"gpt-4-0314"
-					},
-					{
-						text:"gpt-4-32k",
-						value:"gpt-4-32k"
-					},
-					{
-						text:"gpt-4-32k-0314",
-						value:"gpt-4-32k-0314"
-					},
-					{
-						text:"gpt-3.5-turbo",
-						value:"gpt-3.5-turbo"
-					},
-					{
-						text:"gpt-3.5-turbo-0301",
-						value:"gpt-3.5-turbo-0301"
-					},
-					{
-						text:"都不选",
-						value:""
+						name:"GLM-4",
+						value:"glm-4-flash"
 					}
 				],
 				currentModel:''
 			};
 		},
+		mounted() {
+			this.fetchChannel()
+		},
 		methods: {
+			fetchChannel() {
+				uni.request({
+					url: this.getHttpHost() + '/api/pub/llmking/channel/list',
+					method: 'GET',
+					header: {
+					        'Cache-Control': 'no-cache' // 禁用缓存
+					    },
+					// url: 'http://localhost:8086/api/pub/dialogue/channel',
+					success: (res) => {
+						console.log(res)
+						if (res.data.meta.code === 0) {
+							const data = res.data.data;
+							this.models = data.channelList;
+						}
+					},
+					fail: (err) => {
+						console.error(err);
+					}
+				});
+			},
+			getHttpHost() {
+				// 获取系统信息
+				const systemInfo = uni.getSystemInfoSync();
+				// 判断是否为PC浏览器且未模拟手机
+				const isPCBrowser = systemInfo.uniPlatform === 'web' && !/(iPhone|iPod|iPad|Android|Mobile)/i.test(navigator.userAgent);
+					// console.log('getHttpHost')
+					// console.log(systemInfo.platform)
+					// console.log(systemInfo.userAgent)
+				// return isPCBrowser ? 'https://www.llmking.com' : 'https://m.llmking.com';
+				return 'http://localhost:8086';
+			},
 			open(callback){
 				this.currentModel = uni.getStorageSync('uni-ai-chat-llmModel')
 				confirmCallback = callback

@@ -1,9 +1,10 @@
 <template>
 	<view class="container">
 		<!-- #ifdef H5 -->
-		<view v-if="isWidescreen" class="header">uni-ai-chat</view>
+		<view v-if="isWidescreen" class="header">大模王</view>
 		<!-- #endif -->
-		<text class="noData" v-if="msgList.length === 0">没有对话记录</text>
+		<view class="noData" v-if="msgList.length === 0">欢迎使用大模王</view>
+		<view class="noData" v-if="msgList.length === 0">右下角菜单可以切换大模型</view>
 		<scroll-view :scroll-into-view="scrollIntoView" scroll-y="true" class="msg-list" :enable-flex="true">
 			<uni-ai-msg ref="msg" v-for="(msg,index) in msgList" :key="index" :msg="msg" @changeAnswer="changeAnswer"
 				:show-cursor="index == msgList.length - 1 && msgList.length%2 === 0 && sseIndex"
@@ -14,11 +15,7 @@
 					<uni-icons @click="send" color="#d22" type="refresh-filled" class="retries-icon"></uni-icons>
 				</view>
 				<view class="tip-ai-ing" v-else-if="msgList.length">
-					<text>uni-ai正在思考中...</text>
-					<view v-if="NODE_ENV == 'development' && !enableStream">
-						如需提速，请开通<uni-link class="uni-link" href="https://uniapp.dcloud.net.cn/uniCloud/uni-ai-chat.html"
-							text="[流式响应]"></uni-link>
-					</view>
+					<text>大模王生成中...</text>
 				</view>
 			</template>
 			<view v-if="adpid" class="open-ad-btn-box">
@@ -28,7 +25,7 @@
 				</text>
 				<!-- <uni-ad-rewarded-video v-show="insufficientScore" :adpid="adpid" @onAdClose="onAdClose"></uni-ad-rewarded-video> -->
 			</view>
-			<view @click="closeSseChannel" class="stop-responding" v-if="sseIndex"> ▣ 停止响应</view>
+			<view @click="closeOutput" class="stop-responding" v-if="sseIndex"> ▣ 停止生成</view>
 			<view id="last-msg-item" style="height: 1px;"></view>
 		</scroll-view>
 
@@ -36,30 +33,36 @@
 			<!-- #ifdef H5 -->
 			<view class="pc-menu" v-if="isWidescreen">
 				<view class="pc-trash pc-menu-item" @click="clearAllMsg" title="删除">
-					<image src="@/static/remove.png" mode="heightFix"></image>
+					<uni-icons type="trash" size="24"></uni-icons>
 				</view>
 				<view class="settings pc-menu-item" @click="setLLMmodel" title="设置">
-					<uni-icons color="#555" size="20px" type="settings"></uni-icons>
+					<uni-icons color="#555" size="20px" type="bars"></uni-icons>
 				</view>
 			</view>
 			<!-- #endif -->
 			<view class="foot-box-content">
 				<view v-if="!isWidescreen" class="menu">
 					<uni-icons class="menu-item" @click="clearAllMsg" type="trash" size="24" color="#888"></uni-icons>
-					<uni-icons class="menu-item" @click="setLLMmodel" color="#555" size="20px"
-						type="settings"></uni-icons>
+					<uni-icons class="menu-item" @click="setLLMmodel" color="#555" size="20px" type="bars"></uni-icons>
 				</view>
 				<view class="textarea-box">
 					<textarea v-model="content" :cursor-spacing="15" class="textarea" :auto-height="!isWidescreen"
-						placeholder="请输入要发给uni-ai的内容" :maxlength="-1" :adjust-position="false"
+						placeholder="请输入要发给大模王的内容" :maxlength="-1" :adjust-position="false"
 						:disable-default-padding="false" placeholder-class="input-placeholder"></textarea>
 				</view>
 				<view class="send-btn-box" :title="(msgList.length && msgList.length%2 !== 0) ? 'ai正在回复中不能发送':''">
 					<!-- #ifdef H5 -->
 					<text v-if="isWidescreen" class="send-btn-tip">↵ 发送 / shift + ↵ 换行</text>
 					<!-- #endif -->
-					<button @click="beforeSend" :disabled="inputBoxDisabled || !content" class="send"
-						type="primary">发送</button>
+					<!-- <button @click="beforeSend" :disabled="inputBoxDisabled || !content" class="send"
+						type="primary">发送</button> -->
+					<!-- 使用 uni-icons 组件来创建图标按钮 -->
+					<view @click="beforeSend" :class="{'send': true, 'disabled': inputBoxDisabled || !content}"
+						class="icon-send">
+						<uni-icons v-if="inputBoxDisabled || !content" color="#ccc" type="paperplane"
+							size="24"></uni-icons>
+						<uni-icons v-else color="#ff5100" type="paperplane-filled" size="24"></uni-icons>
+					</view>
 				</view>
 			</view>
 		</view>
@@ -68,22 +71,13 @@
 </template>
 
 <script>
+	import OpenAI from 'openai';
 	// 引入配置文件
 	import config from '@/config.js';
 
-	// 导入uniCloud云对象task模块
-	import uniCoTask from '@/common/unicloud-co-task.js';
 	// 导入 将多个字消息文本，分割成单个字 分批插入到最末尾的消息中 的类
 	import SliceMsgToLastMsg from './SliceMsgToLastMsg.js';
-	// 收集所有执行云对象的任务列表
-	let uniCoTaskList = []
-	// 定义终止并清空 云对象的任务列表中所有 任务的方法
-	uniCoTaskList.clear = function() {
-		// 执行数组内的所有任务
-		uniCoTaskList.forEach(task => task.abort())
-		// 清空数组
-		uniCoTaskList.slice(0, uniCoTaskList.length)
-	}
+
 
 	// 获取广告id
 	const {
@@ -94,7 +88,7 @@
 
 	// 键盘的shift键是否被按下
 	let shiftKeyPressed = false
-	
+
 	export default {
 		data() {
 			return {
@@ -103,9 +97,9 @@
 				// 消息列表数据
 				msgList: [],
 				// 通讯请求状态
-				requestState:0,//0发送中 100发送成功 -100发送失败
+				requestState: 0, //0发送中 100发送成功 -100发送失败
 				// 本地对话是否因积分不足而终止
-				insufficientScore:false,
+				insufficientScore: false,
 				// 输入框的消息内容
 				content: "",
 				// 记录流式响应次数
@@ -116,8 +110,20 @@
 				isWidescreen: false,
 				// 广告位id
 				adpid,
-				llmModel: false,
-				keyboardHeight: 0
+				llmModel: 'glm-4-flash',
+				keyboardHeight: 0,
+				responseText: '',
+				userInput: '',
+				messages: [{
+						"role": "system",
+						"content": "You are a helpful assistant."
+					},
+					{
+						"role": "user",
+						"content": "你是谁"
+					}
+				],
+				shouldStopStream: false // 新增用于控制流停止的标志变量
 			}
 		},
 		computed: {
@@ -151,14 +157,14 @@
 				// 深度监听msgList变化
 				deep: true
 			},
-			insufficientScore(insufficientScore){
+			insufficientScore(insufficientScore) {
 				uni.setStorage({
 					"key": "uni-ai-chat-insufficientScore",
 					"data": insufficientScore
 				})
 			},
 			llmModel(llmModel) {
-				let title = 'uni-ai-chat'
+				let title = '大模王'
 				if (llmModel) {
 					title += ` (${llmModel})`
 				}
@@ -216,8 +222,11 @@
 			this.msgList = uni.getStorageSync('uni-ai-msg') || [];
 
 			// 获得之前设置的llmModel
-			this.llmModel = uni.getStorageSync('uni-ai-chat-llmModel')
-			
+			if (uni.getStorageSync('uni-ai-chat-llmModel')) {
+				this.llmModel = uni.getStorageSync('uni-ai-chat-llmModel')
+			} 
+			// this.llmModel = uni.getStorageSync('uni-ai-chat-llmModel')
+
 			// 获得之前设置的uni-ai-chat-insufficientScore
 			this.insufficientScore = uni.getStorageSync('uni-ai-chat-insufficientScore') || false
 
@@ -264,7 +273,7 @@
 						adjunctKeydown = false;
 					}
 				};
-				
+
 				// 可视窗口高
 				let initialInnerHeight = window.innerHeight;
 				if (uni.getSystemInfoSync().platform == "ios") {
@@ -273,7 +282,8 @@
 							if (window.innerHeight !== initialInnerHeight) {
 								clearInterval(interval)
 								// 触发相应的回调函数
-								document.querySelector('.container').style.height = window.innerHeight + 'px'
+								document.querySelector('.container').style.height = window
+									.innerHeight + 'px'
 								window.scrollTo(0, 0);
 								this.showLastMsg()
 							}
@@ -282,8 +292,8 @@
 					textareaDom.addEventListener('blur', () => {
 						document.querySelector('.container').style.height = initialInnerHeight + 'px'
 					})
-				}else{
-					window.addEventListener('resize',(e)=>{
+				} else {
+					window.addEventListener('resize', (e) => {
 						this.showLastMsg()
 					})
 				}
@@ -307,17 +317,69 @@
 					this.llmModel = model
 				})
 			},
-			// 此(惰性)函数，检查是否开通uni-push;决定是否启用enableStream
-			async checkIsOpenPush() {
+			async sendChatRequest(send_message) {
 				try {
-					// 获取推送客户端id
-					await uni.getPushClientId()
-					// 如果获取成功，则将checkIsOpenPush函数重写为一个空函数
-					this.checkIsOpenPush = () => {}
-				} catch (err) {
-					// 如果获取失败，则将enableStream设置为false
-					this.enableStream = false
+					// const env = uni.getEnvConfig();
+					console.log(process.env)
+					const openai = new OpenAI({
+						apiKey: process.env.OPENAI_API_KEY,
+						baseURL: 'http://localhost:3000/v1',
+						dangerouslyAllowBrowser: true
+					});
+					this.shouldStopStream = false; // 重置标志变量为false，以便可以接收新的流数据
+
+					// this.messages[1].content = this.userInput;
+					const stream = await openai.chat.completions.create({
+						model: this.llmModel,
+						messages: send_message,
+						prompt: "请回答",
+						stream: true
+					});
+					// try {
+						//todo 这是生成的，好像是对的
+						if(this.sseIndex === 0){
+							this.responseText = '';
+							
+							let ai_result = {
+								content: '',
+								isAi: true
+							};
+							this.msgList.push(ai_result);
+						}
+
+						// console.log('stream', stream);
+						for await (const part of stream.iterator()) {
+							if (this.shouldStopStream) { // 检查标志变量，若为true则跳出循环
+								break;
+							}
+							this.sseIndex++;
+							if (part.choices[0].delta.content) {
+								// console.log(part.choices[0].delta.content)
+								this.responseText += part.choices[0].delta.content;
+								this.updateLastMsg({
+									content: this.responseText,
+									isAi: true
+								}, true);
+								this.showLastMsg();
+								// ai_result.content += part.choices[0].delta.content;
+							}
+						}
+						this.sseIndex = 0;
+						this.requestState = 100;
+					// } catch (error) {
+					// 	console.error("调用OpenAI API出现错误: ", error);
+					// }
+				} catch (error) {
+					this.sseIndex = 0;
+					this.requestState = -100;
+					// todo 报异常的时候是否弹出
+					console.error("出现错误: ", error);
 				}
+			},
+			closeOutput() {
+				this.sseIndex = 0;
+				this.shouldStopStream = true; // 设置标志变量为true，以停止流数据接收
+				// this.responseText = '';
 			},
 			// 更新最后一条消息
 			updateLastMsg(param) {
@@ -326,7 +388,7 @@
 					return
 				}
 				let lastMsg = this.msgList[length - 1]
-			
+
 				// 如果param是函数，则将最后一条消息作为参数传入该函数
 				if (typeof param == 'function') {
 					let callback = param;
@@ -367,7 +429,7 @@
 						let {
 							score
 						} = res.result.data[0] || {}
-						console.log('score',score);
+						console.log('score', score);
 						if (score > 0 || i > 5) {
 							// 清除轮询定时器
 							clearInterval(myIntive)
@@ -393,9 +455,6 @@
 			// 换一个答案
 			async changeAnswer() {
 				// 如果问题还在回答中需要先关闭
-				if (this.sseIndex) {
-					this.closeSseChannel()
-				}
 				//删除旧的回答
 				this.msgList.pop()
 				this.updateLastMsg({
@@ -403,7 +462,7 @@
 					illegal: false
 				})
 				// 多设备登录时其他设备看广告后点击重新回答，insufficientScore应当设置为 false
-				this.insufficientScore = false
+				// this.insufficientScore = false
 				this.send()
 			},
 			removeMsg(index) {
@@ -411,13 +470,13 @@
 				if (this.msgList[index].isAi) {
 					index -= 1
 				}
-				
+
 				// 如果删除的就是正在问的，且问题还在回答中需要先关闭
 				if (this.sseIndex && index == this.msgList.length - 2) {
-					this.closeSseChannel()
+					// this.closeSseChannel()
 				}
-				
-				this.msgList.splice(index,2)
+
+				this.msgList.splice(index, 2)
 			},
 			async beforeSend() {
 				if (this.inputBoxDisabled) {
@@ -505,38 +564,12 @@
 				this.send() // 发送消息
 			},
 			async send() {
-				// 请求状态归零
-				this.requestState = 0
-				// 防止重复发起，关闭之前的
-				uniCoTaskList.clear()
-				// 清除旧的afterChatCompletion（如果存在）
-				if(this.afterChatCompletion && this.afterChatCompletion.clear) this.afterChatCompletion.clear()
-				
+
 				let messages = []
 				// 复制一份，消息列表数据
 				let msgs = JSON.parse(JSON.stringify(this.msgList))
-				
-				// - 获取上下文的代码【start】-
-				// 带总结的消息 index
-				let findIndex = [...msgs].reverse().findIndex(item => item.summarize)
-				// console.log('findIndex', findIndex)
-				if (findIndex != -1) {
-					let aiSummaryIndex = msgs.length - findIndex - 1
-					// console.log('aiSummaryIndex', aiSummaryIndex)
-					// 将带总结的消息的 内容 更换成 总结
-					msgs[aiSummaryIndex].content = msgs[aiSummaryIndex].summarize
-					// 拿最后一条带直接的消息作为与ai对话的msg body
-					msgs = msgs.splice(aiSummaryIndex)
-				} else {
-					// 如果未总结过就直接从末尾拿10条
-					msgs = msgs.splice(-10)
-				}
-				// 过滤涉敏问题
-				msgs = msgs.filter(msg => !msg.illegal)
-				// - 获取上下文的代码【end】-
-				
-				// 如果：不希望带上上下文；请注释掉 上方：获取上下文的代码【start】-【end】。并添加，代码： msgs = [msgs.pop()]
-				// 根据数据内容设置角色
+				msgs = msgs.splice(-3)
+
 				messages = msgs.map(item => {
 					// 角色默认为用户
 					let role = "user"
@@ -551,252 +584,9 @@
 				})
 
 				// 在控制台输出 向ai机器人发送的完整消息内容
-				console.log('send to ai messages:', messages);
+				// console.log('send to ai messages:', messages);
+				this.sendChatRequest(messages);
 
-				// 检查是否开通uni-push;决定是否启用enableStream
-				await this.checkIsOpenPush()
-				// console.log('this.enableStream',this.enableStream);
-
-				// 流式响应和云对象的请求结束回调函数
-				let sseEnd,requestEnd;
-				// 判断是否开启了流式响应模式
-				if (this.enableStream) {
-					// 创建消息通道
-					sseChannel = new uniCloud.SSEChannel()
-					// console.log('sseChannel',sseChannel);
-					
-					// 将多个字的文本，分割成单个字 分批插入到最末尾的消息中
-					this.sliceMsgToLastMsg = new SliceMsgToLastMsg(this)
-					// 监听message事件
-					sseChannel.on('message', (message) => {
-						// console.log('on message', message);
-						// 将从云端接收到的消息添加到消息列表中
-
-						// 如果之前未添加过就添加，否则就执行更新最后一条消息
-						if (this.sseIndex === 0) {
-							this.msgList.push({
-								isAi: true,
-								content: message,
-								create_time: Date.now()
-							})
-						} else {
-							this.sliceMsgToLastMsg.addMsg(message)
-							// this.updateLastMsg(lastMsg => {
-							// 	lastMsg.content += message
-							// })
-						}
-						this.showLastMsg()
-						// 让流式响应计数值递增
-						this.sseIndex++
-					})
-
-					// 监听end事件，如果云端执行end时传了message，会在客户端end事件内收到传递的消息
-					sseChannel.on('end', (e) => {
-						console.log('sse 结束',e)
-						// 更改“按字分割追加到最后一条消息“的时间间隔为0，即：一次性加载完（不再分割加载）
-						this.sliceMsgToLastMsg.t = 0
-						if(e && typeof e == 'object' && e.errCode){
-							let setLastAiMsgContent = (content)=>{
-								// console.log(content);
-								// 如果最后一项不是ai的就添加，否则就执行更新最后一条消息
-								if (this.sseIndex === 0) {
-									this.msgList.push({
-										isAi: true,
-										content,
-										create_time: Date.now()
-									})
-								} else {
-									this.updateLastMsg(lastMsg => {
-										lastMsg.content += content
-									})
-								}
-								this.showLastMsg()
-							}
-							if(e.errCode == 60004){
-								//服务商检测到AI输出了敏感内容
-								let length = this.msgList.length
-								//如果最后一项不是ai，就创建一项
-								if(length % 2){
-									this.msgList.push({
-										isAi: true,
-										content:"内容涉及敏感",
-										illegal:true,
-										create_time: Date.now()
-									})
-									length += 1
-								}
-								// 更新倒数第2项 用户提的问题
-								this.msgList[length - 2].illegal = true
-								// 更新倒数第1项 ai 回答的内容
-								this.msgList[length - 1].illegal = true
-								this.msgList[length - 1].content = "内容涉及敏感"
-								
-							}else{
-								setLastAiMsgContent(e.errMsg)
-							}
-						}
-						sseEnd()
-					})
-					await sseChannel.open(); // 等待通道开启
-					
-					// 等待对话完成（云函数请求完成，sse 执行了 end）之后
-					(function fnSelf(that){
-						fnSelf.clear = ()=>{
-							// console.log('do fnSelf.clear');
-							if(fnSelf.clear.sse){
-								// console.log('fnSelf.clear.sse();')
-								fnSelf.clear.sse();
-							}
-							if(fnSelf.clear.request){
-								// console.log('fnSelf.clear.request();')
-								fnSelf.clear.request();
-							}
-						}
-						Promise.all([
-							new Promise((resolve,reject)=>{
-								sseEnd = resolve;
-								fnSelf.clear.sse = reject;
-							}),
-							new Promise((resolve,reject)=>{
-								requestEnd = resolve;
-								fnSelf.clear.request = reject;
-							})
-						]).then((e)=>{
-							// console.log('sseEnd && requestEnd');
-							//当两个都结束时
-							sseChannel.close()
-							// 结束流式响应 将流式响应计数值 设置为 0
-							that.sseIndex = 0
-						}).catch((err)=>{
-							// console.log('afterChatCompletion is close',err);
-						})
-						that.afterChatCompletion = fnSelf
-					})(this)
-				}
-				
-				// 导入uni-ai-chat模块，并设置customUI为true
-				let task = uniCoTask({
-					coName: "uni-ai-chat",
-					funName: "send",
-					param: [{
-						messages, // 消息列表
-						sseChannel, // 消息通道
-						llmModel: this.llmModel
-					}],
-					config: {
-						customUI: true
-					},
-					success: res => {
-						// 更新 通讯状态为100（发送成功）
-						this.requestState = 100
-						// console.log("success",res);
-						if (!res.data) return
-						
-						let {
-							reply,
-							summarize,
-							insufficientScore,
-							illegal
-						} = res.data
-						
-						// 特殊处理 - start
-						if(this.enableStream == false && !reply){
-							//服务商检测到AI输出了敏感内容
-							illegal = true
-							reply = "内容涉及敏感"
-						}
-						// 特殊处理 - end
-            
-            // 非流式模式 && 内容涉及敏感
-            if (this.enableStream == false && illegal) {
-            	console.error('内容涉及敏感');
-            	this.updateLastMsg({
-            		// 添加消息涉敏标记
-            		illegal: true
-            	})
-            }
-
-						// 非流式模式 或者流式模式，但列表还没有数据且已经进入异常的情况下
-						if (this.enableStream == false || this.sseIndex == 0 && (illegal||insufficientScore)) {
-							// 将从云端接收到的消息添加到消息列表中
-							this.msgList.push({
-								// 消息创建时间
-								create_time: Date.now(),
-								// 标记消息为来自AI机器人
-								isAi: true,
-								// 消息内容
-								content:reply,
-								// 消息是否涉敏标记
-								illegal
-							})
-						}
-						
-						if(insufficientScore){
-							// 积分不足
-							this.insufficientScore = true
-						}
-						// 如果回调包含总结的内容，就设置总结
-						if(summarize){
-							console.log(' 拿到总结',summarize);
-							// 总结的内容是上一轮对话的
-							// console.log('setSummarize');
-							let index = this.msgList.length - 1;
-							// 如果最后一项是ai就往前退2项，否则退1项（流式响应的时候，回答可能晚于总结）
-							if(index%2){
-								index -= 2
-							}else{
-								index -= 1
-							}
-							// 假如第一次提问就需要总结
-							if (index < 1) {
-								index = 1
-							}
-							let msg = this.msgList[index]
-							msg.summarize = summarize
-							this.msgList.splice(index, 1, msg)
-							// console.log('setSummarize this.msgList',this.msgList,this.msgList.length-1,index);
-						}
-						
-					},
-					complete:e=>{
-						if (this.enableStream) {
-							requestEnd()
-						}
-						// console.log('complete:',e);
-						// 滚动窗口以显示最新的一条消息
-						this.$nextTick(() => {
-							this.showLastMsg()
-						})
-					},
-					fail: e => {
-						console.error(e);
-						// 更新 通讯状态为-100（发送失败）
-						this.requestState = -100
-						// 弹框提示用户错误原因
-						uni.showModal({
-							content: JSON.stringify(e.message),
-							showCancel: false
-						});
-						// 如果启用流式，云函数出错了，sse 也应当被终止
-						if (this.enableStream) {
-							sseEnd()
-						}
-					}
-				})
-				uniCoTaskList.push(task)
-			},
-			closeSseChannel() {
-				// 如果存在消息通道，就关闭消息通道
-				if (sseChannel) {
-					sseChannel.close()
-					// 设置为 false 防止重复调用closeSseChannel时出错
-					sseChannel = false
-					this.sliceMsgToLastMsg.end()
-				}
-				// 清空历史网络请求（调用云对象）任务
-				uniCoTaskList.clear()
-				// 将流式响应计数值归零
-				this.sseIndex = 0
 			},
 			// 滚动窗口以显示最新的一条消息
 			showLastMsg() {
@@ -820,8 +610,6 @@
 					complete: (e) => {
 						// 如果用户确认清空聊天记录
 						if (e.confirm) {
-							// 关闭ssh请求
-							this.closeSseChannel()
 							// 将消息列表清空 
 							this.msgList.splice(0, this.msgList.length);
 						}
@@ -982,11 +770,11 @@
 		text-align: center;
 		width: 750rpx;
 		color: #aaa;
-		font-size: 12px;
+		font-size: 14px;
 		justify-content: center;
 	}
-	
-	.open-ad-btn-box{
+
+	.open-ad-btn-box {
 		justify-content: center;
 		margin: 10px 0;
 	}
@@ -1010,7 +798,8 @@
 			border-top: solid 1px #dde0e2;
 		}
 
-		.container,.container * {
+		.container,
+		.container * {
 			max-width: 950px;
 		}
 
@@ -1022,7 +811,7 @@
 			overflow: hidden;
 			background-color: #FAFAFA;
 		}
-		
+
 		page {
 			background-color: #efefef;
 		}
@@ -1030,10 +819,11 @@
 		.container .header {
 			height: 44px;
 			line-height: 44px;
+			color: #ff5100;
 			border-bottom: 1px solid #F0F0F0;
 			width: 100vw;
 			justify-content: center;
-			font-weight: 500;
+			font-weight: 900;
 		}
 
 		.content {
@@ -1120,14 +910,16 @@
 			line-height: 28px;
 		}
 	}
+
 	/* #endif */
-	.retries-box{
+	.retries-box {
 		justify-content: center;
 		align-items: center;
 		font-size: 12px;
 		color: #d2071b;
 	}
-	.retries-icon{
+
+	.retries-icon {
 		margin-top: 1px;
 		margin-left: 5px;
 	}

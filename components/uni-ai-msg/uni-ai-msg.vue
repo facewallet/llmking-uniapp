@@ -5,17 +5,23 @@
 		</view>
 		<view :class="{reverse:!msg.isAi}">
 			<view class="userInfo">
-				<image class="avatar" :src="msg.isAi?'../../static/uni-ai.png':'../../static/avatar.png'" mode="widthFix"></image>
+				<!-- 				<image class="avatar" :src="msg.isAi?'../../static/uni-ai.png':'../../static/avatar.png'"
+					mode="widthFix"></image> -->
+				<!-- 使用uni-icons展示头像 -->
+				<uni-icons v-if="msg.isAi" color="#ff5100" type="headphones" size="30" class="avatar"></uni-icons>
+				<uni-icons v-else color="#ff5100" type="contact" size="30" class="avatar"></uni-icons>
 			</view>
 			<view class="content">
 				<view v-if="msg.isAi" class="rich-text-box" :class="{'show-cursor':showCursor}" ref="rich-text-box">
-					<rich-text v-if="nodes&&nodes.length" space="nbsp" :nodes="nodes" @itemclick="trOnclick"></rich-text>
+					<rich-text v-if="nodes&&nodes.length" space="nbsp" :nodes="nodes"
+						@itemclick="trOnclick"></rich-text>
 				</view>
 				<view v-else>{{msgContent}}</view>
 				<view class="menu-box" :class='{"menu-box-ai":msg.isAi}'>
-          <uni-icons v-if="isLastMsg && msg.isAi" title="换一个答案" @click="changeAnswer" color="#ccc" class="pointer change-answer" type="reload" size="16"></uni-icons>
+					<uni-icons v-if="isLastMsg && msg.isAi" title="换一个答案" @click="changeAnswer" color="#ccc"
+						class="pointer change-answer" type="reload" size="16"></uni-icons>
 					<view @click="showMoreMenu = !showMoreMenu" class="more-icon-box">
-            <uni-icons class="more-icon pointer" size="12px" type="more-filled" color="#ccc"></uni-icons>
+						<uni-icons class="more-icon pointer" size="12px" type="more-filled" color="#ccc"></uni-icons>
 					</view>
 					<template v-if="showMoreMenu">
 						<view class="more-menu">
@@ -23,7 +29,8 @@
 								<view class="copy-icon-a"></view>
 								<view class="copy-icon-b"></view>
 							</view>
-							<uni-icons class="remove-msg pointer" @click="removeMsg" type="trash" size="20" color="#ccc"></uni-icons>
+							<uni-icons class="remove-msg pointer" @click="removeMsg" type="trash" size="20"
+								color="#ccc"></uni-icons>
 						</view>
 						<view class="more-menu-mask" @click="showMoreMenu = false"></view>
 					</template>
@@ -53,10 +60,10 @@
 
 	// console.log('hljs--',hljs);
 	// console.log('hljs--',hljs.getLanguage('js'));
-	
+
 	// 为复制代码功能保留代码内容
 	let codeDataList = []
-	
+
 	// 初始化 MarkdownIt库
 	const markdownIt = MarkdownIt({
 		// 在源码中启用 HTML 标签
@@ -79,30 +86,34 @@
 				// console.log('err',err);
 				preCode = markdownIt.utils.escapeHtml(str);
 			}
-			
-			
+
+
 			// 以换行进行分割
 			const lines = preCode.split(/\n/).slice(0, -1)
 			// 添加自定义行号
 			let html = lines.map((item, index) => {
 				// 去掉空行
-				if( item == ''){
+				if (item == '') {
 					return ''
 				}
-				return '<li><span class="line-num" data-line="' + (index + 1) + '"></span>' + item +'</li>'
+				return '<li><span class="line-num" data-line="' + (index + 1) + '"></span>' + item +
+					'</li>'
 			}).join('')
 			html = '<ol style="padding: 0px 30px;">' + html + '</ol>'
-			
+
 			// 代码复制功能
 			codeDataList.push(str)
-			let htmlCode = `<div style="background:#0d1117;margin-top: 5px;color: #888;padding:5px 0;border-radius: 5px;">`
-				// #ifndef MP-WEIXIN
-					htmlCode += `<div style="text-align: end;font-size: 12px;">`
-						htmlCode += `${lang}<a class="copy-btn" code-data-index="${codeDataList.length - 1}" style="cursor: pointer;"> 复制代码 </a>`
-					htmlCode += `</div>`
-				// #endif
-					htmlCode += `<pre class="hljs" style="padding:0 8px;margin-bottom:5px;overflow: auto;display: block;border-radius: 5px;"><code>${html}</code></pre>`;
-				htmlCode += '</div>'
+			let htmlCode =
+				`<div style="background:#0d1117;margin-top: 5px;color: #888;padding:5px 0;border-radius: 5px;">`
+			// #ifndef MP-WEIXIN
+			htmlCode += `<div style="text-align: end;font-size: 12px;">`
+			htmlCode +=
+				`${lang}<a class="copy-btn" code-data-index="${codeDataList.length - 1}" style="cursor: pointer;"> 复制代码 </a>`
+			htmlCode += `</div>`
+			// #endif
+			htmlCode +=
+				`<pre class="hljs" style="padding:0 8px;margin-bottom:5px;overflow: auto;display: block;border-radius: 5px;"><code>${html}</code></pre>`;
+			htmlCode += '</div>'
 			return htmlCode
 		}
 	})
@@ -116,13 +127,11 @@
 				// 悬浮的复制按钮的上边距
 				top: "-100px",
 				adpid,
-				showMoreMenu:false
+				showMoreMenu: false
 			};
 		},
-		mounted() {
-		},
-		created() {
-		},
+		mounted() {},
+		created() {},
 		props: {
 			// 是否显示鼠标闪烁的效果
 			showCursor: {
@@ -142,7 +151,7 @@
 				default () {
 					return {
 						content: "",
-						isDelete:false
+						isDelete: false
 					}
 				}
 			},
@@ -152,7 +161,7 @@
 				return this.msg.content
 			},
 			nodes() {
-				if(!this.msgContent){
+				if (!this.msgContent) {
 					return //处理特殊情况，比如网络异常导致的响应的 content 的值为空
 				}
 				let htmlString = ''
@@ -160,7 +169,7 @@
 				// 判断markdown中代码块标识符的数量是否为偶数
 				if (this.msgContent.split("```").length % 2) {
 					let msgContent = this.msgContent
-					if(msgContent[msgContent.length-1] != '\n'){
+					if (msgContent[msgContent.length - 1] != '\n') {
 						msgContent += '\n'
 					}
 					msgContent += ' <span class="cursor">|</span>'
@@ -182,16 +191,23 @@
 			}
 		},
 		methods: {
-			trOnclick(e){
+			trOnclick(e) {
 				console.log(e);
-				let {attrs} = e.detail.node
-				console.log({attrs});
-				let {"code-data-index":codeDataIndex,"class":className} = attrs
-				if(className == 'copy-btn'){
+				let {
+					attrs
+				} = e.detail.node
+				console.log({
+					attrs
+				});
+				let {
+					"code-data-index": codeDataIndex,
+					"class": className
+				} = attrs
+				if (className == 'copy-btn') {
 					// console.log('codeDataList[codeDataIndex]',codeDataList[codeDataIndex]);
 					uni.setClipboardData({
-						data:codeDataList[codeDataIndex],
-						showToast:false,
+						data: codeDataList[codeDataIndex],
+						showToast: false,
 						success() {
 							uni.showToast({
 								title: '复制成功',
@@ -201,7 +217,7 @@
 					})
 				}
 			},
-			changeAnswer(){
+			changeAnswer() {
 				this.$emit('changeAnswer')
 			},
 			// 复制文本内容到系统剪切板
@@ -219,7 +235,7 @@
 				this.showMoreMenu = false
 			},
 			// 删除消息
-			removeMsg(){
+			removeMsg() {
 				this.$emit('removeMsg')
 				this.showMoreMenu = false
 			}
@@ -236,6 +252,7 @@
 		display: flex;
 		box-sizing: border-box;
 	}
+
 	/* #endif */
 
 	.userInfo {
@@ -249,6 +266,7 @@
 		padding: 0 15px;
 		padding-bottom: 15px;
 	}
+
 	.avatar {
 		width: 40px;
 		height: 40px;
@@ -284,7 +302,7 @@
 		/* #endif */
 		flex-direction: column;
 	}
-	
+
 	.menu-box {
 		position: absolute;
 		left: -18px;
@@ -293,56 +311,58 @@
 		flex-direction: column;
 		height: 40px;
 		justify-content: flex-end;
-    /* #ifndef APP-NVUE */
-    /* #endif */
+		/* #ifndef APP-NVUE */
+		/* #endif */
 	}
-	
+
 	.menu-box-ai {
 		left: auto;
 		right: -20px;
 	}
-	
+
 	.change-answer {
 		margin-bottom: 5px;
 		position: relative;
-    transform: rotate(90deg);
+		transform: rotate(90deg);
 	}
-  
-  /* #ifdef H5 */
-  .uni-icons {
-    opacity: 0.6;
-  }
-  .uni-icons:hover{
-    opacity: 1;
-  }
-  /* #endif */
-	
+
+	/* #ifdef H5 */
+	.uni-icons {
+		opacity: 0.6;
+	}
+
+	.uni-icons:hover {
+		opacity: 1;
+	}
+
+	/* #endif */
+
 	.pointer {
 		cursor: pointer;
 	}
-	
+
 	.pointer:hover {
 		color: #BBB;
 	}
-	
+
 	.more-icon-box {
 		justify-content: center;
 		overflow: hidden;
 	}
-	
+
 	.more-icon {
 		color: #d4d4d4;
 		transform: rotate(90deg);
-    padding-top: 2px;
+		padding-top: 2px;
 		position: relative;
 		font-size: 16px;
 		z-index: 999;
 	}
-	
+
 	.more-menu {
 		position: absolute;
-		bottom:-10px;
-		left:-30px;
+		bottom: -10px;
+		left: -30px;
 		flex-direction: column;
 		justify-content: space-around;
 		width: 30px;
@@ -353,7 +373,7 @@
 		box-shadow: 0 0 20px #eee;
 		border-radius: 3px;
 	}
-	
+
 	.more-menu-mask {
 		position: fixed;
 		width: 100vw;
@@ -362,21 +382,22 @@
 		left: 0;
 		z-index: 998;
 	}
-	
+
 	.menu-box-ai .more-menu {
-		left:auto;
+		left: auto;
 		right: -32px;
 	}
-	
-	.more-menu .pointer{
+
+	.more-menu .pointer {
 		width: 20px;
 	}
-	
-	.copy-icon{
+
+	.copy-icon {
 		position: relative;
 		height: 25px;
 		width: 20px;
 	}
+
 	.copy-icon-a,
 	.copy-icon-b {
 		position: absolute;
@@ -388,13 +409,16 @@
 		top: 4px;
 		border-radius: 3px;
 	}
+
 	.copy-icon-b {
 		top: 8px;
 		left: 6px;
 	}
+
 	.copy-icon:hover .copy-icon-a,
-	.copy-icon:hover .copy-icon-b,{
-		border-color:#bbb;
+	.copy-icon:hover .copy-icon-b,
+	{
+	border-color: #bbb;
 	}
 
 	/* #ifndef APP-NVUE */
@@ -402,6 +426,7 @@
 		max-width: 100%;
 		overflow: auto;
 	}
+
 	code .l:before {
 		color: #516363;
 		position: absolute;
@@ -409,6 +434,7 @@
 		content: counter(step);
 		counter-increment: step;
 	}
+
 	/* #endif */
 
 
@@ -429,11 +455,12 @@
 		margin-top: 15px;
 		justify-content: center;
 	}
-	
+
 	/* #ifdef H5 */
 	a.copy-btn:hover {
-	    color: #259939;
+		color: #259939;
 	}
+
 	/* #endif */
 
 

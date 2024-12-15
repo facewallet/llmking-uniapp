@@ -1,25 +1,27 @@
 {
-	"id": "uni-ai-chat",
-	"name": "uni-ai-chat",
+	"id": "llmking",
+	"name": "llmking",
 	"version": "1.2.13",
-	"description": "基于uni-ai的聊天示例项目，支持流式、支持前文总结，云端一体",
+	"description": "大模王-大模型集成供应商",
 	"main": "main.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
-	"repository": "https://gitcode.net/dcloud/uni-ai-chat",
 	"keywords": [
-        "uni-ai-chat",
-        "gpt",
-        "chatgpt",
-        "openai"
-    ],
+		"llmking",
+		"大模王",
+		"gpt",
+		"chatgpt",
+		"openai"
+	],
 	"author": "",
 	"license": "ISC",
-	"dependencies": {},
-	"displayName": "uni-ai-chat",
-    "dcloudext": {
-        "sale": {
+	"dependencies": {
+		"openai": "^4.76.3"
+	},
+	"displayName": "llmking",
+	"dcloudext": {
+		"sale": {
 			"regular": {
 				"price": "0.00"
 			},
@@ -47,8 +49,8 @@
 		"platforms": {
 			"cloud": {
 				"tcb": "y",
-                "aliyun": "y",
-                "alipay": "y"
+				"aliyun": "y",
+				"alipay": "y"
 			},
 			"client": {
 				"App": {

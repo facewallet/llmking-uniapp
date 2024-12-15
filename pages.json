@@ -3,7 +3,7 @@
 		{
 			"path": "pages/chat/chat",
 			"style": {
-				"navigationBarTitleText": "uni-ai-chat",
+				"navigationBarTitleText": "大模王",
 				"enablePullDownRefresh": false
 				// #ifdef H5
 				,"navigationStyle": "custom"
@@ -93,6 +93,14 @@
 			"style": {
 				"enablePullDownRefresh": false,
 				"navigationBarTitleText": "实名认证"
+			}
+		},
+
+		{
+			"path" : "pages/index/index",
+			"style" : 
+			{
+				"navigationBarTitleText" : "one-api"
 			}
 		}
 	],
