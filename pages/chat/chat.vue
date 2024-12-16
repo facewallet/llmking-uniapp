@@ -320,10 +320,12 @@
 			async sendChatRequest(send_message) {
 				try {
 					// const env = uni.getEnvConfig();
-					console.log(process.env)
+					// console.log(process.env)
+					// console.log(process.env.VUE_APP_OPENAI_API_KEY)
 					const openai = new OpenAI({
-						apiKey: process.env.OPENAI_API_KEY,
-						baseURL: 'http://localhost:3000/v1',
+						apiKey: 'llmking',
+						baseURL: 'http://localhost:8086/api/pub',
+						// baseURL: 'http://localhost:3000/v1',
 						dangerouslyAllowBrowser: true
 					});
 					this.shouldStopStream = false; // 重置标志变量为false，以便可以接收新的流数据
@@ -354,7 +356,7 @@
 							}
 							this.sseIndex++;
 							if (part.choices[0].delta.content) {
-								// console.log(part.choices[0].delta.content)
+								console.log(part.choices[0].delta.content)
 								this.responseText += part.choices[0].delta.content;
 								this.updateLastMsg({
 									content: this.responseText,
