@@ -17,22 +17,20 @@
 </template>
 
 <script>
-	let confirmCallback = ()=>{}
+	let confirmCallback = () => {}
 	export default {
 		name: "llm-config",
 		data() {
 			return {
-				models: [
-					{
-						name:"GLM-4",
-						value:"glm-4-flash"
-					}
-				],
-				currentModel:''
+				models: [{
+					name: "GLM-4",
+					value: "glm-4-flash"
+				}],
+				currentModel: ''
 			};
 		},
-		mounted() {
-			this.fetchChannel()
+		beforeMount() {
+			this.fetchChannel();
 		},
 		methods: {
 			fetchChannel() {
@@ -40,14 +38,37 @@
 					url: this.getHttpHost() + '/api/pub/llmking/channel/list',
 					method: 'GET',
 					header: {
-					        'Cache-Control': 'no-cache' // 禁用缓存
-					    },
-					// url: 'http://localhost:8086/api/pub/dialogue/channel',
+						'Cache-Control': 'no-cache' // 禁用缓存
+					},
 					success: (res) => {
-						console.log(res)
+						// console.log(res)
 						if (res.data.meta.code === 0) {
 							const data = res.data.data;
 							this.models = data.channelList;
+							this.currentModel = uni.getStorageSync('uni-ai-chat-llmModel') ;
+							if (!this.currentModel){
+								this.currentModel = data.currentChannel.value;
+								uni.setStorageSync('uni-ai-chat-llmModel', data.currentChannel.value);
+							}
+							// console.log(data.APIKEY)
+							uni.setStorage({
+								key: 'APIKEY',
+								data: data.APIKEY
+							})
+							// if (!uni.getStorageSync('uni-ai-chat-llmModel-name')) {
+							// 	this.currentModel = data.currentChannel.name;
+							// 	uni.setStorageSync('uni-ai-chat-llmModel-name', data.currentChannel.name);
+							// 	uni.setStorageSync('uni-ai-chat-llmModel', data.currentChannel.value);
+							// } else {
+							// 	this.currentModel = uni.getStorageSync('uni-ai-chat-llmModel-name');
+							// 	// todo 遍历models，找到对应的value
+							// 	for (let i = 0; i < this.models.length; i++) {
+							// 		if (this.models[i].name === this.currentModel) {
+							// 			uni.setStorageSync('uni-ai-chat-llmModel', this.models[i].value);
+							// 			break;
+							// 		}
+							// 	}
+							// }
 						}
 					},
 					fail: (err) => {
@@ -59,26 +80,27 @@
 				// 获取系统信息
 				const systemInfo = uni.getSystemInfoSync();
 				// 判断是否为PC浏览器且未模拟手机
-				const isPCBrowser = systemInfo.uniPlatform === 'web' && !/(iPhone|iPod|iPad|Android|Mobile)/i.test(navigator.userAgent);
-					// console.log('getHttpHost')
-					// console.log(systemInfo.platform)
-					// console.log(systemInfo.userAgent)
-				// return isPCBrowser ? 'https://www.llmking.com' : 'https://m.llmking.com';
-				return 'http://localhost:8086';
+				const isPCBrowser = systemInfo.uniPlatform === 'web' && !/(iPhone|iPod|iPad|Android|Mobile)/i.test(
+					navigator.userAgent);
+				// console.log('getHttpHost')
+				// console.log(systemInfo.platform)
+				// console.log(systemInfo.userAgent)
+				return isPCBrowser ? 'https://www.llmking.com' : 'https://m.llmking.com';
+				// return 'http://localhost:8086';
 			},
-			open(callback){
+			open(callback) {
 				this.currentModel = uni.getStorageSync('uni-ai-chat-llmModel')
 				confirmCallback = callback
 				this.$refs.popup.open('center')
 			},
 			radioChange(event) {
-				console.log('event',event.detail.value)
+				console.log('event', event.detail.value)
 				this.currentModel = event.detail.value
 			},
-			cancel(){
+			cancel() {
 				this.$refs.popup.close()
 			},
-			confirm(){
+			confirm() {
 				// console.log(this.models[this.current]);
 				confirmCallback(this.currentModel)
 				this.$refs.popup.close()
@@ -94,16 +116,18 @@
 	.box *,
 	/* #endif */
 	radio-group,
-	label
-	{
+	label {
 		display: flex;
 		box-sizing: border-box;
 	}
+
 	/* #endif */
-	.box,.title,.btn-box {
+	.box,
+	.title,
+	.btn-box {
 		width: 250px;
 	}
-	
+
 	.box {
 		background-color: #fff;
 		display: flex;
@@ -112,6 +136,7 @@
 		padding-bottom: 0;
 		border-radius: 5px;
 	}
+
 	.title {
 		font-size: 16px;
 		padding: 10px 0;
@@ -123,45 +148,52 @@
 		display: inline-block;
 		/* #endif */
 	}
+
 	.radio-group {
 		flex-direction: column;
 		padding: 0 15px;
 	}
+
 	.radio {
 		transform: scale(0.7);
 	}
+
 	.item {
 		flex-direction: row;
 		margin-bottom: 5px;
 		position: relative;
 	}
+
 	.item-title {
 		font-size: 14px;
 		color: #555;
 	}
-	.btn-box{
+
+	.btn-box {
 		/* #ifdef APP-NVUE */
-		border-top:solid 1px #ccc;
+		border-top: solid 1px #ccc;
 		/* #endif */
 		height: 48px;
 		position: relative;
 	}
+
 	/* #ifndef APP-NVUE */
 	.btn-box:after {
-	    content: " ";
-	    position: absolute;
-	    left: 0;
-	    top: 0;
-	    right: 0;
-	    height: 1px;
-	    border-top: 1px solid #d5d5d6;
-	    color: #d5d5d6;
-	    transform-origin: 0 0;
-	    transform: scaleY(.5);
+		content: " ";
+		position: absolute;
+		left: 0;
+		top: 0;
+		right: 0;
+		height: 1px;
+		border-top: 1px solid #d5d5d6;
+		color: #d5d5d6;
+		transform-origin: 0 0;
+		transform: scaleY(.5);
 	}
+
 	/* #endif */
-	
-	.btn{
+
+	.btn {
 		justify-content: center;
 		align-items: center;
 		width: 150px;
@@ -169,29 +201,30 @@
 		cursor: pointer;
 		/* #endif */
 	}
-	
+
 	.confirm {
 		color: #007aff;
 		position: relative;
 		/* #ifdef APP-NVUE */
-		border-left:solid 1px #ccc;
+		border-left: solid 1px #ccc;
 		/* #endif */
 	}
-	
+
 	/* #ifndef APP-NVUE */
 	.confirm::before {
-	    content: "";
-	    position: absolute;
-	    left: 0;
-	    top: 0;
-	    right: 0;
+		content: "";
+		position: absolute;
+		left: 0;
+		top: 0;
+		right: 0;
 		background-color: #d5d5d6;
-	    height: 48px;
+		height: 48px;
 		width: 1px;
-	    /* border-top: 1px solid #d5d5d6; */
-	    /* color: #d5d5d6; */
-	    /* transform-origin: 0 0; */
-	    transform: scaleX(.5);
+		/* border-top: 1px solid #d5d5d6; */
+		/* color: #d5d5d6; */
+		/* transform-origin: 0 0; */
+		transform: scaleX(.5);
 	}
+
 	/* #endif */
 </style>

@@ -1,13 +1,13 @@
 {
-  "hash": "d3532433",
-  "configHash": "d27f8b7c",
+  "hash": "5ec3c4f1",
+  "configHash": "8d752b06",
   "lockfileHash": "67d917ed",
-  "browserHash": "31f7f03c",
+  "browserHash": "3ddf0534",
   "optimized": {
     "openai": {
       "src": "../../../../../node_modules/openai/index.mjs",
       "file": "openai.js",
-      "fileHash": "c5ec80bc",
+      "fileHash": "a35471ba",
       "needsInterop": false
     }
   },

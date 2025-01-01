@@ -94,14 +94,6 @@
 				"enablePullDownRefresh": false,
 				"navigationBarTitleText": "实名认证"
 			}
-		},
-
-		{
-			"path" : "pages/index/index",
-			"style" : 
-			{
-				"navigationBarTitleText" : "one-api"
-			}
 		}
 	],
 	"globalStyle": {

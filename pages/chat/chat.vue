@@ -1,7 +1,12 @@
 <template>
 	<view class="container">
 		<!-- #ifdef H5 -->
-		<view v-if="isWidescreen" class="header">大模王</view>
+		<view  class="header">大模王
+		
+		<!-- <image v-if="isWidescreen" src="/static/miniapp.jpg"></image> -->
+		<image src="/static/miniapp.jpg"></image>
+		
+		</view>
 		<!-- #endif -->
 		<view class="noData" v-if="msgList.length === 0">欢迎使用大模王</view>
 		<view class="noData" v-if="msgList.length === 0">右下角菜单可以切换大模型</view>
@@ -171,10 +176,10 @@
 				// uni.setNavigationBarTitle({title})
 				// #ifdef H5
 				if (this.isWidescreen) {
-					document.querySelector('.header').innerText = title
+					// document.querySelector('.header').innerText = title
 				}
 				// #endif
-				uni.setStorage({
+				uni.setStorageSync({
 					key: 'uni-ai-chat-llmModel',
 					data: llmModel
 				})
@@ -311,10 +316,27 @@
 			// #endif
 		},
 		methods: {
+			getHttpHost() {
+				// 获取系统信息
+				const systemInfo = uni.getSystemInfoSync();
+				// 判断是否为PC浏览器且未模拟手机
+				const isPCBrowser = systemInfo.uniPlatform === 'web' && !/(iPhone|iPod|iPad|Android|Mobile)/i.test(
+					navigator.userAgent);
+				// console.log('getHttpHost')
+				// console.log(systemInfo.platform)
+				// console.log(systemInfo.userAgent)
+				return isPCBrowser ? 'https://www.llmking.com' : 'https://m.llmking.com';
+				// return isPCBrowser ? 'https://www.tcmbot.com' : 'https://m.tcmbot.com';
+				// return 'http://localhost:8086';
+			},
 			setLLMmodel() {
 				this.$refs['llm-config'].open(model => {
 					console.log('model', model);
 					this.llmModel = model
+					uni.setStorageSync({
+						key: 'uni-ai-chat-llmModel',
+						data: this.llmModel
+					})
 				})
 			},
 			async sendChatRequest(send_message) {
@@ -322,15 +344,19 @@
 					// const env = uni.getEnvConfig();
 					// console.log(process.env)
 					// console.log(process.env.VUE_APP_OPENAI_API_KEY)
+					const APIKEY = uni.getStorageSync('APIKEY');
+					console.log('APIKEY', APIKEY);
 					const openai = new OpenAI({
-						apiKey: 'llmking',
-						baseURL: 'http://localhost:8086/api/pub',
+						apiKey: APIKEY,
+						// todo 要改 baseURL: 'http://localhost:8086/api/pub',
 						// baseURL: 'http://localhost:3000/v1',
+						baseURL: this.getHttpHost()+'/v1',
 						dangerouslyAllowBrowser: true
 					});
 					this.shouldStopStream = false; // 重置标志变量为false，以便可以接收新的流数据
 
 					// this.messages[1].content = this.userInput;
+					this.llmModel = uni.getStorageSync('uni-ai-chat-llmModel')
 					const stream = await openai.chat.completions.create({
 						model: this.llmModel,
 						messages: send_message,
@@ -339,7 +365,7 @@
 					});
 					// try {
 						//todo 这是生成的，好像是对的
-						if(this.sseIndex === 0){
+						// if(this.sseIndex === 0){
 							this.responseText = '';
 							
 							let ai_result = {
@@ -347,9 +373,9 @@
 								isAi: true
 							};
 							this.msgList.push(ai_result);
-						}
+						// }
 
-						// console.log('stream', stream);
+						console.log('stream', stream);
 						for await (const part of stream.iterator()) {
 							if (this.shouldStopStream) { // 检查标志变量，若为true则跳出循环
 								break;
@@ -358,6 +384,7 @@
 							if (part.choices[0].delta.content) {
 								console.log(part.choices[0].delta.content)
 								this.responseText += part.choices[0].delta.content;
+								console.log(this.responseText)
 								this.updateLastMsg({
 									content: this.responseText,
 									isAi: true
@@ -813,20 +840,27 @@
 			overflow: hidden;
 			background-color: #FAFAFA;
 		}
-
-		page {
-			background-color: #efefef;
-		}
-
 		.container .header {
-			height: 44px;
-			line-height: 44px;
+			height: 50px;
+			line-height: 50px;
 			color: #ff5100;
 			border-bottom: 1px solid #F0F0F0;
 			width: 100vw;
 			justify-content: center;
 			font-weight: 900;
+			font-size: 24px;
 		}
+		.header image {
+			width: 48px;
+			height:48px;
+			margin-left: 10px;
+		}
+
+		page {
+			background-color: #efefef;
+		}
+
+
 
 		.content {
 			background-color: #f9f9f9;
@@ -914,6 +948,21 @@
 	}
 
 	/* #endif */
+	.container .header {
+		height: 40px;
+		line-height: 40px;
+		color: #ff5100;
+		border-bottom: 1px solid #F0F0F0;
+		width: 100vw;
+		justify-content: center;
+		font-weight: 900;
+		font-size: 18px;
+	}
+	.header image {
+		width: 38px;
+		height:38px;
+		margin-left: 10px;
+	}
 	.retries-box {
 		justify-content: center;
 		align-items: center;
