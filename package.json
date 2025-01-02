@@ -17,7 +17,9 @@
 	"author": "",
 	"license": "ISC",
 	"dependencies": {
-		"openai": "^4.76.3"
+		"openai": "^4.76.3",
+		"url-polyfill": "^1.1.12",
+		"whatwg-fetch": "^3.6.20"
 	},
 	"displayName": "llmking",
 	"dcloudext": {

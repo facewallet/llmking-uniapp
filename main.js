@@ -1,3 +1,4 @@
+import 'url-polyfill';
 import App from './App'
 import share from './share'
 

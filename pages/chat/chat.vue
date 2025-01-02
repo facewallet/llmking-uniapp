@@ -76,8 +76,9 @@
 </template>
 
 <script>
-	// import 'openai/shims/web';
-	// import OpenAI from 'openai';
+	import 'whatwg-fetch'; // 引入polyfill库
+	import 'openai/shims/web';
+	import OpenAI from 'openai';
 	// 引入配置文件
 	import config from '@/config.js';
 
@@ -340,212 +341,166 @@
 					})
 				})
 			},
-			// async sendChatRequest(send_message) {
-			// 	try {
-			// 		const APIKEY = uni.getStorageSync('APIKEY');
-			// 		console.log('APIKEY', APIKEY);
-			// 		const openai = new OpenAI({
-			// 			apiKey: APIKEY,
-			// 			// todo 要改 baseURL: 'http://localhost:8086/api/pub',
-			// 			// baseURL: 'http://localhost:3000/v1',
-			// 			baseURL: this.getHttpHost()+'/v1',
-			// 			dangerouslyAllowBrowser: true
-			// 		});
-			// 		this.shouldStopStream = false; // 重置标志变量为false，以便可以接收新的流数据
-
-			// 		// this.messages[1].content = this.userInput;
-			// 		this.llmModel = uni.getStorageSync('uni-ai-chat-llmModel')
-			// 		const stream = await openai.chat.completions.create({
-			// 			model: this.llmModel,
-			// 			messages: send_message,
-			// 			prompt: "请回答",
-			// 			stream: true
-			// 		});
-			// 		// try {
-			// 			//todo 这是生成的，好像是对的
-			// 			// if(this.sseIndex === 0){
-			// 				this.responseText = '';
-
-			// 				let ai_result = {
-			// 					content: '',
-			// 					isAi: true
-			// 				};
-			// 				this.msgList.push(ai_result);
-			// 			// }
-
-			// 			console.log('stream', stream);
-			// 			for await (const part of stream.iterator()) {
-			// 				if (this.shouldStopStream) { // 检查标志变量，若为true则跳出循环
-			// 					break;
-			// 				}
-			// 				this.sseIndex++;
-			// 				if (part.choices[0].delta.content) {
-			// 					console.log(part.choices[0].delta.content)
-			// 					this.responseText += part.choices[0].delta.content;
-			// 					console.log(this.responseText)
-			// 					this.updateLastMsg({
-			// 						content: this.responseText,
-			// 						isAi: true
-			// 					}, true);
-			// 					this.showLastMsg();
-			// 					// ai_result.content += part.choices[0].delta.content;
-			// 				}
-			// 			}
-			// 			this.sseIndex = 0;
-			// 			this.requestState = 100;
-			// 	} catch (error) {
-			// 		this.sseIndex = 0;
-			// 		this.requestState = -100;
-			// 		// todo 报异常的时候是否弹出
-			// 		console.error("出现错误: ", error);
-			// 	}
-			// },
-			async sendChatRequestUniapp(send_message) {
+			async sendChatRequestOpenAI(send_message) {
 				try {
 					const APIKEY = uni.getStorageSync('APIKEY');
 					console.log('APIKEY', APIKEY);
-					const baseURL = this.getHttpHost() + '/v1'; // 确保this.getHttpHost()正确定义并返回合法地址
-					const header = {
-						'Content-Type': 'application/json',
-						'Authorization': `Bearer ${APIKEY}`
-					};
-					const data = {
-						model: uni.getStorageSync('uni-ai-chat-llmModel'),
+					const openai = new OpenAI({
+						apiKey: APIKEY,
+						// todo 要改 baseURL: 'http://localhost:8086/api/pub',
+						// baseURL: 'http://localhost:3000/v1',
+						baseURL: this.getHttpHost() + '/v1',
+						dangerouslyAllowBrowser: true
+					});
+					this.shouldStopStream = false; // 重置标志变量为false，以便可以接收新的流数据
+
+					// this.messages[1].content = this.userInput;
+					this.llmModel = uni.getStorageSync('uni-ai-chat-llmModel')
+					const stream = await openai.chat.completions.create({
+						model: this.llmModel,
 						messages: send_message,
 						prompt: "请回答",
 						stream: true
-					};
-					const [err, res] = await uni.request({
-						url: baseURL + '/chat/completions', // 根据OpenAI实际接口路径准确调整
-						method: 'POST',
-						header: header,
-						data: data,
-						dataType: 'json'
 					});
-					if (!err) {
-						const responseData = res.data;
-						this.responseText = '';
-						let ai_result = {
-							content: '',
-							isAi: true
-						};
-						this.msgList.push(ai_result);
-						console.log('responseData', responseData);
-						if (responseData.choices && responseData.choices[0].delta && responseData.choices[0].delta
-							.content) {
-							let part;
-							for (let index = 0; index < responseData.choices[0].delta.length; index++) {
-								part = responseData.choices[0].delta[index];
-								if (this.shouldStopStream) {
-									break;
-								}
-								this.sseIndex++;
-								if (part.content) {
-									console.log(part.content);
-									this.responseText += part.content;
-									console.log(this.responseText);
-									this.updateLastMsg({
-										content: this.responseText,
-										isAi: true
-									}, true);
-									this.showLastMsg();
-								}
-							}
+					// try {
+					//todo 这是生成的，好像是对的
+					// if(this.sseIndex === 0){
+					this.responseText = '';
+
+					let ai_result = {
+						content: '',
+						isAi: true
+					};
+					this.msgList.push(ai_result);
+					// }
+
+					console.log('stream', stream);
+					for await (const part of stream.iterator()) {
+						if (this.shouldStopStream) { // 检查标志变量，若为true则跳出循环
+							break;
 						}
-						this.sseIndex = 0;
-						this.requestState = 100;
-					} else {
-						this.sseIndex = 0;
-						this.requestState = -100;
-						console.error("请求出现错误: ", err);
-						// 可以在这里添加更详细的错误处理逻辑，比如根据不同错误码给用户展示不同提示信息
-						// 通过uni.showToast等方式展示错误提示
+						this.sseIndex++;
+						if (part.choices[0].delta.content) {
+							console.log(part.choices[0].delta.content)
+							this.responseText += part.choices[0].delta.content;
+							console.log(this.responseText)
+							this.updateLastMsg({
+								content: this.responseText,
+								isAi: true
+							}, true);
+							this.showLastMsg();
+							// ai_result.content += part.choices[0].delta.content;
+						}
 					}
+					this.sseIndex = 0;
+					this.requestState = 100;
 				} catch (error) {
 					this.sseIndex = 0;
 					this.requestState = -100;
+					// todo 报异常的时候是否弹出
 					console.error("出现错误: ", error);
 				}
 			},
-			async sendChatRequestUniapp2(send_message) {
-				try {
-					const APIKEY = uni.getStorageSync('APIKEY');
-					console.log('APIKEY', APIKEY);
-					const baseURL = this.getHttpHost() + '/v1'; // 确保this.getHttpHost()正确定义并返回合法地址
-					const header = {
-						'Content-Type': 'application/json',
-						'Authorization': `Bearer ${APIKEY}`
-					};
-					const data = {
-						model: uni.getStorageSync('uni-ai-chat-llmModel'),
-						messages: send_message,
-						prompt: "请回答",
-						stream: true
-					};
-					const [err, res] = await uni.request({
-						url: baseURL + '/chat/completions', // 根据OpenAI实际接口路径准确调整
-						method: 'POST',
-						header: header,
-						data: data,
-						dataType: 'json'
-					});
-					if (!err) {
-						const responseData = res.data;
-						this.responseText = '';
-						let ai_result = {
-							content: '',
-							isAi: true
-						};
-						this.msgList.push(ai_result);
-						console.log('responseData', responseData);
-						if (responseData.choices && responseData.choices[0].delta) {
-							// 检查responseData.choices[0].delta是否是可迭代类型（这里以数组为例，可根据实际接口情况调整判断方式）
-							if (Array.isArray(responseData.choices[0].delta)) {
-								let part;
-								for (let index = 0; index < responseData.choices[0].delta.length; index++) {
-									part = responseData.choices[0].delta[index];
-									if (this.shouldStopStream) {
-										break;
-									}
-									this.sseIndex++;
-									if (part.content) {
-										console.log(part.content);
-										this.responseText += part.content;
-										console.log(this.responseText);
-										this.updateLastMsg({
-											content: this.responseText,
-											isAi: true
-										}, true);
-										this.showLastMsg();
-									}
-								}
-							} else {
-								console.error("接口返回数据格式不符合预期，choices[0].delta不是可迭代类型", responseData.choices[0].delta);
-								// 可以在这里添加相应的处理逻辑，比如提示用户数据异常，或者尝试重新请求等
-								this.requestState = -100;
-								return;
-							}
-						} else {
-							console.error("接口返回数据缺少必要字段", responseData);
-							this.requestState = -100;
-							return;
-						}
-						this.sseIndex = 0;
-						this.requestState = 100;
-					} else {
-						this.sseIndex = 0;
-						this.requestState = -100;
-						console.error("请求出现错误: ", err);
-						// 可以在这里添加更详细的错误处理逻辑，比如根据不同错误码给用户展示不同提示信息
-						// 通过uni.showToast等方式展示错误提示
-					}
-				} catch (error) {
-					this.sseIndex = 0;
-					this.requestState = -100;
-					console.error("出现错误: ", error);
-				}
-			},
-			closeOutput() {
+    async sendChatRequestUniapp(send_message) {
+      try {
+        const APIKEY = uni.getStorageSync('APIKEY');
+        this.responseText = '';
+        let ai_result = {
+          content: '',
+          isAi: true
+        };
+        this.msgList.push(ai_result);
+
+        const url = `${this.getHttpHost()}/v1/chat/completions`;
+        const headers = {
+          'Authorization': `Bearer ${APIKEY}`,
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
+        };
+
+        const data = {
+          model: "glm-4-flash",
+          messages: send_message,
+          prompt: "请回答",
+          stream: true
+        };
+
+        // 使用uni.request发送请求
+        const response = await this.uniFetch(url, {
+          method: 'POST',
+          headers: headers,
+          data: JSON.stringify(data)
+        });
+
+        // 处理响应
+        if (response.statusCode === 200) {
+          // 开始轮询
+          this.startPolling(url, headers);
+        } else {
+          throw new Error('Failed to fetch data from OpenAI API');
+        }
+      } catch (error) {
+        console.error("出现错误: ", error);
+      }
+    },
+
+    uniFetch(url, options) {
+      return new Promise((resolve, reject) => {
+		  console.log(options)
+        uni.request({
+          url: url,
+          method: 'POST',
+          header: options.headers,
+          data: options.data,
+          success: (res) => {
+            resolve(res);
+          },
+          fail: (err) => {
+            reject(err);
+          }
+        });
+      });
+    },
+
+    startPolling(url, headers) {
+      this.pollInterval = setInterval(async () => {
+        const response = await this.uniFetch(url, {
+          method: 'POST',
+          header: headers,
+        });
+
+        if (response.statusCode === 200) {
+          this.handlePollingResponse(response.data);
+        } else {
+          clearInterval(this.pollInterval);
+          throw new Error('Failed to fetch data from OpenAI API');
+        }
+      }, 1000); // 设置轮询间隔为1秒
+    },
+
+    handlePollingResponse(data) {
+      const dataArray = data.trim().split('\n\n');
+      dataArray.forEach(item => {
+        if (!item.includes('data: [DONE]')) {
+          const dataObject = JSON.parse(item.replace('data:', ''));
+          this.handleSingleData(dataObject);
+        } else {
+          clearInterval(this.pollInterval); // 如果接收到[DONE]，停止轮询
+        }
+      });
+    },
+
+    handleSingleData(singleData) {
+      if (singleData.choices && singleData.choices[0].delta && singleData.choices[0].delta.content) {
+        this.responseText += singleData.choices[0].delta.content;
+        this.updateLastMsg({
+          content: this.responseText,
+          isAi: true
+        }, true);
+      }
+    },
+
+		closeOutput() {
 				this.sseIndex = 0;
 				this.shouldStopStream = true; // 设置标志变量为true，以停止流数据接收
 				// this.responseText = '';
@@ -752,10 +707,11 @@
 					}
 				})
 
-				// 在控制台输出 向ai机器人发送的完整消息内容
+				// 在控制台输出 向ai机器人发送的完整消息内容 sendChatRequestByGLM4
 				// console.log('send to ai messages:', messages);
-				// this.sendChatRequest2(messages);
-				this.sendChatRequestUniapp2(messages);
+				// this.sendChatRequestOpenAI(messages);
+				// this.sendChatRequest(messages);
+				this.sendChatRequestUniapp(messages);
 
 			},
 			// 滚动窗口以显示最新的一条消息

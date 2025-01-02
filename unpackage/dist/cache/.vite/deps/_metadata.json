@@ -1,8 +1,40 @@
 {
-  "hash": "5ec3c4f1",
+  "hash": "8e8de981",
   "configHash": "8d752b06",
-  "lockfileHash": "67d917ed",
-  "browserHash": "43595953",
-  "optimized": {},
-  "chunks": {}
+  "lockfileHash": "54e2bf62",
+  "browserHash": "7ac50b29",
+  "optimized": {
+    "openai/shims/web": {
+      "src": "../../../../../node_modules/openai/shims/web.mjs",
+      "file": "openai_shims_web.js",
+      "fileHash": "cb4aab31",
+      "needsInterop": false
+    },
+    "openai": {
+      "src": "../../../../../node_modules/openai/index.mjs",
+      "file": "openai.js",
+      "fileHash": "723e98d6",
+      "needsInterop": false
+    },
+    "whatwg-fetch": {
+      "src": "../../../../../node_modules/whatwg-fetch/fetch.js",
+      "file": "whatwg-fetch.js",
+      "fileHash": "20df99e8",
+      "needsInterop": false
+    },
+    "url-polyfill": {
+      "src": "../../../../../node_modules/url-polyfill/url-polyfill.js",
+      "file": "url-polyfill.js",
+      "fileHash": "65766576",
+      "needsInterop": true
+    }
+  },
+  "chunks": {
+    "chunk-AOF6TQBG": {
+      "file": "chunk-AOF6TQBG.js"
+    },
+    "chunk-Y2F7D3TJ": {
+      "file": "chunk-Y2F7D3TJ.js"
+    }
+  }
 }
